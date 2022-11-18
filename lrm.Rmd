@@ -1,0 +1,291 @@
+---
+title: "Introduction to Linear Regression in R"
+author: "Ziyang Lyu & Steefan Contractor"
+date: '2022-10-26'
+output:
+  html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message=FALSE)
+
+library(tidyverse)
+library(patchwork)
+
+knitr::opts_chunk$set(message=FALSE)
+theme_set(theme_minimal())
+```
+
+```{r make data, include=FALSE}
+make_linear_data <- function(n_observations=100) {
+  ## this makes simple linear data 
+  d <- data.frame(
+    id = 1:n_observations, 
+    x = runif(n = n_observations, min = -1, max = 4)) %>% 
+    mutate(
+      y = 2 + x * rnorm(n = n_observations, mean=1, sd=0.5)
+    )
+} 
+
+make_squared_data <- function(n_observations=100) { 
+  ## this makes simple data that is quadratic in x 
+  d <- data.frame(
+    id = 1:n_observations, 
+    x = runif(n = n_observations, min = -5, max = 5)) %>% 
+    mutate(
+        y = 2 + 3 * x + x^2 + rnorm(n = n_observations)
+    )
+}
+```
+
+# Motivation
+
+Consider the example dataset of height vs weight. 
+
+```{r, echo=T}
+HvW <- read.delim('Height_vs_Weight.txt',header=T)
+```
+
+Inspect the data. Is there a relationship between the two variables?
+
+Plot the data to visualize the relationship.
+```{r, echo=T}
+plot(HvW$height, HvW$weight, main='height ~ weight',xlab="height", ylab="weight")
+```
+
+What is the response (dependent) variable and what is the predictor (independent) variable here? 
+
+What is the hypothesis? 
+
+What happens to the hypothesis if we switch the dependent and independent variable?
+ 
+# Simple linear regression
+
+For this analysis, we will use the `cars` dataset that comes with R by default.
+
+`cars` is a standard built-in dataset, that makes it convenient to show linear regression in a simple and easy to understand fashion.
+
+You can access this dataset by typing in `cars` in your R console.
+
+You will find that it consists of 50 observations(rows) and 2 variables (columns) `dist` and `speed.` Lets print out the first six observations here.
+
+```{r, echo = TRUE}
+head(cars)  # display the first 6 observations
+```
+
+The goal here is to establish a mathematical equation for `dist` as a function of `speed`, so you can use it to predict `dist` when only the `speed` of the car is known.
+
+So it is desirable to build a linear regression model with the response variable as `dist` and the predictor as `speed`.
+
+Before we begin building the regression model, it is a good practice to analyse and understand the variables.
+
+The graphical analysis and correlation study below will help with this.
+
+# Graphical Analysis
+
+The aim of this exercise is to build a simple regression model that you can use to predict Distance (`dist`).
+
+This is possible by establishing a mathematical formula between Distance (`dist`) and Speed (`speed`).
+
+But before jumping in to the syntax, lets try to understand these variables graphically.
+
+Typically, for each of the predictors, the following plots help visualise the patterns:
+
+1.  Scatter plot: Visualise the linear relationship between the predictor and response
+2.  Box plot: To spot any outlier observations in the variable. Having outliers in your predictor can drastically affect the predictions as they can affect the direction/slope of the line of best fit.
+3.  Density plot: To see the distribution of the predictor variable. Ideally, a close to normal distribution (a bell shaped curve), without being skewed to the left or right is preferred.
+
+# Using Scatter Plot To Visualise The Relationship
+
+Scatter plots can help visualise linear relationships between the response and predictor variables.
+
+Ideally, if you have many predictor variables, a scatter plot is drawn for each one of them against the response, along with the line of best fit as seen below.
+
+```{r, echo = TRUE}
+scatter.smooth(x=cars$speed, y=cars$dist, main="Dist ~ Speed")  # scatterplot
+```
+
+The scatter plot along with the smoothing line above suggests a linear and positive relationship between the `dist` and `speed`.
+
+This is a good thing.
+
+Because, one of the underlying assumptions of linear regression is, the relationship between the response and predictor variables is linear and additive.
+
+# Using Density Plot To Check If Response Variable Is Close To Normal
+
+```{r, echo = TRUE}
+library(e1071)  # for skewness function
+par(mfrow=c(1, 2))  # divide graph area in 2 columns
+
+plot(density(cars$speed), main="Density Plot: Speed", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(cars$speed), 2)))  # density plot for 'speed'
+
+polygon(density(cars$speed), col="red")
+
+plot(density(cars$dist), main="Density Plot: Distance", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(cars$dist), 2)))  # density plot for 'dist'
+
+polygon(density(cars$dist), col="red")
+```
+# Using BoxPlot To Check For Outliers
+
+Generally, an outlier is any datapoint that lies outside the 1.5 \* inter quartile range (IQR).
+
+IQR is calculated as the distance between the 25th percentile and 75th percentile values for that variable.
+
+```{r, echo = TRUE}
+par(mfrow=c(1, 2))  # divide graph area in 2 columns
+
+boxplot(cars$speed, main="Speed", sub=paste("Outlier rows: ", boxplot.stats(cars$speed)$out))  # box plot for 'speed'
+
+boxplot(cars$dist, main="Distance", sub=paste("Outlier rows: ", boxplot.stats(cars$dist)$out))  # box plot for 'distance'
+```
+
+NOTE: You should never remove outliers unless you are certain they are measurement errors or known exceptions. 
+
+<!-- ### Exercise -->
+<!-- 1. Read the lung capacity data from the LungCap.txt file. -->
+<!-- 2. Pick suitable predictor and response variables. -->
+<!-- 3. Use a scatter plot to determine the nature of the relationship between the chosen variables. -->
+<!-- 4. Use a boxplot to determine if there are any outliers. -->
+<!-- 5. Use a density plot to determine if the variables follow a normal distribution. -->
+
+# What is Correlation Analysis
+
+Correlation analysis studies the strength of relationship between two continuous variables. It involves computing the correlation coefficient between the the two variables.
+
+So what is correlation? And how is it helpful in linear regression?
+
+Correlation is a statistical measure that shows the degree of linear dependence between two variables.
+
+In order to compute correlation, the two variables must occur in pairs, just like what we have here with `speed` and `dist`.
+
+Correlation can take values between -1 to +1.
+
+If one variables consistently increases with increasing value of the other, then they have a strong positive correlation (value close to +1).
+
+Similarly, if one consistently decreases when the other increase, they have a strong negative correlation (value close to -1).
+
+A value closer to 0 suggests a weak relationship between the variables.
+
+A low correlation (-0.2 \< x \< 0.2) probably suggests that much of variation of the response variable (Y) is unexplained by the predictor (X). In that case, you should probably look for better explanatory variables.
+
+If you observe the cars dataset in the R console, for every instance where speed increases, the distance also increases along with it.
+
+That means, there is a strong positive relationship between them. So, the correlation between them will be closer to 1.
+
+However, correlation doesn't imply causation.
+
+In other words, if two variables have high correlation, it does not mean one variable 'causes' the value of the other variable to increase.
+
+Correlation is only an aid to understand the relationship. You can only rely on logic and reasoning based on domain expertise to make that judgement.
+
+So, how to compute correlation in R?
+
+Simply use the `cor()` function with the two numeric variables as arguments.
+
+```{r, echo = TRUE}
+cor(cars$speed, cars$dist)  # calculate correlation between speed and distance 
+```
+
+# Build the Linear Regression Model
+
+Now that you have seen the linear relationship pictorially in the scatter plot and through correlation, let's try building the linear regression model.
+
+The function used for building linear models is`lm()`.
+
+The`lm()` function takes in two main arguments:
+
+1.Formula 2.Data
+
+The data is typically a data.frame object and the formula is a object of class formula.
+
+But the most common convention is to write out the formula directly as written below.
+
+```{r, echo = TRUE}
+linearMod <- lm(dist ~ speed, data=cars)  # build linear regression model on full data
+print(linearMod)
+```
+
+By building the linear regression model, we have established the relationship between the predictor and response in the form of a mathematical formula.
+
+That is Distance (`dist`) as a function for `speed`.
+
+For the above output, you can notice the Coefficients part having two components: Intercept: -17.579, speed: 3.932.
+
+These are also called the beta coefficients. In other words,
+
+dist = -17.579 + 3.932\*speed
+
+Now the linear model is built and you have a formula that you can use to predict the `dist` value if a corresponding `speed` is known.
+
+Is this enough to actually use this model? NO!
+
+First we need to check if the model meets assumptions of a linear model
+
+# Check if the model meets assumptions
+
+Simple linear regression belongs to a family of linear models that must all meet the following assumptions:
+
+- The relationship between response and predictor variables must be linear.
+- The spread (std. dev.) of residuals must be constant. In other words the distribution of residuals must be symmetric. This property is known as homoscedasticity and when this property is not met we say the data is heteroscesastic.
+- The distribution of residuals must not only be symmetric but in fact be normal with a mean of 0.
+- The residuals must be independent of each other. This can occur for example when there is autocorrelation within the residuals, i.e., the [i+1]th residual follows the [i]th residual (lag-1 autocorrelation).
+
+Now that we understand the assumptions that must be satisfied, the following plots can help us check them.
+
+```{r, echo=T}
+hist(residuals(linearMod))
+plot(linearMod)
+```
+
+Consider the following plots of a linear model. Is there a problem here?
+```{r}
+d <- make_linear_data()
+hist(residuals(lm(d$y ~ d$x)))
+plot(lm(d$y ~ d$x))
+```
+
+What happens if the assumptions are not satisfied?
+
+- Try a different model/different predictor variable. 
+- Try transforming the response or predictor variables.
+
+
+### Exercise
+
+- Read data from speed_vs_drag.txt
+- How do speed and drag relate to each other (use a scatter plot)?
+- Fit a model to quantify this relationship. 
+- Using diagnostic plots, assess whether model meets assumptions of a linear model.
+- If not, transform the data and fit a new model. Hint: Inspect the plots again, could the relationship be a higher order polynomial?
+- Check the diagnostic plots again to see if the transformation worked. 
+
+
+# Checking the goodness of fit
+
+Lets begin by printing the summary statistics for `linearMod.`
+```{r, echo = TRUE}
+summary(linearMod)  # model summary
+```
+
+![Above: Metrics for assessing model fit and how to interpret them.](metrics.jpg)
+
+### Exercise 4
+1. Is your transformed speed vs drag model a good fit?  
+
+# Prediction
+
+To make predictions with a fitted model use the predict() function.
+```{r, echo=T}
+newspeed = data.frame(speed=c(10,20,5))
+predict(linearMod, newspeed)
+```
+### Exercise
+
+- Predict the resistance using your transformed speed vs resistance model from earlier with speeds 12 km/h, 36 km/h and 72 km/h.
+- If the drag force (resistance) is defined by the formula F_d = 1/2 * ρ * A * v^2 where ρ is the air density = 1.2 kg/m^3, A is the cross-sectional area = 1 m^2, calculate the model error between the theoretical wind resistance and the predictions.
+
+# Challenge
+
+Repeat the entire analysis with LungCap.txt data
+
