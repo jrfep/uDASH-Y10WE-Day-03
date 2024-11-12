@@ -23,8 +23,8 @@ We are preparing the 2024 edition
 Use `main` branch for up to date material.
 
 Other branches:
-- Original material for the year 2022 in branch `WE2022` 
-- New material for the year 2023 in branch `WE2023` prepared by Lyu and Dan
+- Original material for the year 2022 in branch `WE2022` prepared by Ziyang Lyu & Steefan Contractor
+- Modified material for the year 2023 in branch `WE2023` prepared by Lyu and Dan
 - Modified material for students for year 2024 in branch `WE2024` with contribution from Anikó B. Tóth [@anikobtoth](https://github.com/anikobtoth) and Lyu
 
 ## Other repositories
